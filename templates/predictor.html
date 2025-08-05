@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Monaco GP - Lap Time Predictor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {% comment %} <link rel="stylesheet" href="style.css"> {% endcomment %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/predictor.css') }}">
+</head>
+<body>
+    <div class="racing-grid"></div>
+    
+    <main class="main-container">
+        <div class="hero-section">
+            <div class="hero-content">
+                <div class="racing-emblem">
+                    <div class="emblem-ring">
+                        <div class="emblem-center">F1</div>
+                    </div>
+                </div>
+                <h1 class="hero-title">Monaco GP Predictor</h1>
+                <p class="hero-subtitle">Advanced Machine Learning Race Time Prediction</p>
+            </div>
+        </div>
+
+        <div class="prediction-interface">
+            <div class="interface-card">
+                <div class="card-header">
+                    <h2 class="interface-title">Race Parameters</h2>
+                    <p class="interface-subtitle">Adjust the sliders to predict lap times</p>
+                </div>
+
+                <form class="prediction-form" id="predictionForm">
+                    <div class="parameters-grid">
+                        <div class="parameter-group">
+                            <label class="parameter-label" for="qualifying_time">
+                                <span class="label-text">Qualifying Time</span>
+                                <span class="label-value" id="qualifying_time_value">70.5s</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" 
+                                       id="qualifying_time" 
+                                       name="qualifying_time"
+                                       min="69.0" 
+                                       max="73.0" 
+                                       step="0.1" 
+                                       value="70.5" 
+                                       class="parameter-slider">
+                                <div class="slider-track-fill" style="width: 37.5%"></div>
+                            </div>
+                        </div>
+
+                        <div class="parameter-group">
+                            <label class="parameter-label" for="rain_probability">
+                                <span class="label-text">Rain Probability</span>
+                                <span class="label-value" id="rain_probability_value">20%</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" 
+                                       id="rain_probability" 
+                                       name="rain_probability"
+                                       min="0" 
+                                       max="100" 
+                                       step="1" 
+                                       value="20" 
+                                       class="parameter-slider">
+                                <div class="slider-track-fill" style="width: 20%"></div>
+                            </div>
+                        </div>
+
+                        <div class="parameter-group">
+                            <label class="parameter-label" for="temperature">
+                                <span class="label-text">Temperature</span>
+                                <span class="label-value" id="temperature_value">25°C</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" 
+                                       id="temperature" 
+                                       name="temperature"
+                                       min="15" 
+                                       max="40" 
+                                       step="1" 
+                                       value="25" 
+                                       class="parameter-slider">
+                                <div class="slider-track-fill" style="width: 40%"></div>
+                            </div>
+                        </div>
+
+                        <div class="parameter-group">
+                            <label class="parameter-label" for="team_performance">
+                                <span class="label-text">Team Performance Score</span>
+                                <span class="label-value" id="team_performance_value">0.70</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" 
+                                       id="team_performance" 
+                                       name="team_performance"
+                                       min="0.0" 
+                                       max="1.0" 
+                                       step="0.01" 
+                                       value="0.70" 
+                                       class="parameter-slider">
+                                <div class="slider-track-fill" style="width: 70%"></div>
+                            </div>
+                        </div>
+
+                        <div class="parameter-group">
+                            <label class="parameter-label" for="clean_air_pace">
+                                <span class="label-text">Clean Air Race Pace</span>
+                                <span class="label-value" id="clean_air_pace_value">94.0s</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" 
+                                       id="clean_air_pace" 
+                                       name="clean_air_pace"
+                                       min="90.0" 
+                                       max="100.0" 
+                                       step="0.1" 
+                                       value="94.0" 
+                                       class="parameter-slider">
+                                <div class="slider-track-fill" style="width: 40%"></div>
+                            </div>
+                        </div>
+
+                        <div class="parameter-group">
+                            <label class="parameter-label" for="position_change">
+                                <span class="label-text">Average Position Change</span>
+                                <span class="label-value" id="position_change_value">0.0</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" 
+                                       id="position_change" 
+                                       name="position_change"
+                                       min="-3.0" 
+                                       max="3.0" 
+                                       step="0.1" 
+                                       value="0.0" 
+                                       class="parameter-slider">
+                                <div class="slider-track-fill" style="width: 50%"></div>
+                            </div>
+                        </div>
+
+                        <div class="parameter-group">
+                            <label class="parameter-label" for="sector_time">
+                                <span class="label-text">Total Sector Time</span>
+                                <span class="label-value" id="sector_time_value">95.0s</span>
+                            </label>
+                            <div class="slider-container">
+                                <input type="range" 
+                                       id="sector_time" 
+                                       name="sector_time"
+                                       min="90.0" 
+                                       max="100.0" 
+                                       step="0.1" 
+                                       value="95.0" 
+                                       class="parameter-slider">
+                                <div class="slider-track-fill" style="width: 50%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn--secondary reset-btn" id="resetBtn">
+                            Reset Values
+                        </button>
+                        <button type="submit" class="btn btn--primary predict-btn" id="predictBtn">
+                            <span class="btn-text">Predict Lap Time</span>
+                            <div class="btn-loader hidden">
+                                <div class="loader-spinner"></div>
+                            </div>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="results-section hidden" id="resultsSection">
+                    <div class="results-card">
+                        <div class="results-header">
+                            <div class="results-icon">🏁</div>
+                            <h3 class="results-title">Predicted Lap Time</h3>
+                        </div>
+                        <div class="results-time" id="predictedTime">--.-s</div>
+                        <div class="results-info">
+                            <p class="results-note">Based on advanced ML analysis of Monaco GP data</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {% comment %} <script src="app.js"></script> {% endcomment %}
+    <script src="{{ url_for('static', filename='js/predictor.js') }}"></script>
+</body>
+</html>
