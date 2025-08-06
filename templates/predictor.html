@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    {% comment %} <link rel="stylesheet" href="style.css"> {% endcomment %}
+    <!-- <link rel="stylesheet" href="style.css">-->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/predictor.css') }}">
 </head>
 <body>
@@ -183,7 +183,7 @@
                         </div>
                         <div class="results-time" id="predictedTime">--.-s</div>
                         <div class="results-info">
-                            <p class="results-note">Based on advanced ML analysis of Monaco GP data</p>
+                            <p class="results-note">Based on ML analysis of Monaco GP data</p>
                         </div>
                     </div>
                 </div>
@@ -191,7 +191,6 @@
         </div>
     </main>
 
-    {% comment %} <script src="app.js"></script> {% endcomment %}
     <script src="{{ url_for('static', filename='js/predictor.js') }}"></script>
 </body>
 </html>

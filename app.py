@@ -1,77 +1,99 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
+# from flask_cors import CORS
 import pickle
 import numpy as np
-import os
+import pandas as pd
 
-# Create Flask app
 app = Flask(__name__)
+# core(app)
 
-# Load your trained model, scaler, and imputer
-model_path = 'saved_model.pkl'  # Ensure this path matches your saved model file
-if not os.path.exists(model_path):
-    raise FileNotFoundError(f"Model file not found at {model_path}. Please ensure it's correctly saved.")
+def load_model():
+    try:
+        with open('saved_model.pkl', 'rb') as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        return None
 
-with open(model_path, 'rb') as f:
-    model_data = pickle.load(f)
+MODEL_DATA = load_model()
+if MODEL_DATA:
+    model = MODEL_DATA['model']
+    scaler = MODEL_DATA['scaler']
+    imputer = MODEL_DATA['imputer']
+    features = MODEL_DATA['features']
+    # Compute and store the training target mean for confidence calculation
+    # (Assumes MODEL_DATA contains a key 'AvgLapTime'; set this when training)
+    AvgLapTime = MODEL_DATA.get('AvgLapTime', None)
+    print("AVGLAPTIME:",AvgLapTime)
+else:
+    model = scaler = imputer = None
+    features = []
+    AvgLapTime = None
 
-model = model_data['model']
-scaler = model_data['scaler']
-imputer = model_data['imputer']
-features = model_data['features']
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-# Optional: Feature importance for reference
-feature_importances = model.feature_importances_
+@app.route('/predictor')
+def predictor():
+    return render_template('predictor.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        data = request.get_json()
+        if not MODEL_DATA:
+            return jsonify({'error': 'Model not loaded.'}), 500
 
-        # Validate incoming data keys
+        data = request.get_json(force=True)
         required_keys = [
             'qualifying_time', 'rain_probability', 'temperature',
             'team_performance', 'clean_air_pace', 'position_change', 'sector_time'
         ]
-        missing_keys = [key for key in required_keys if key not in data]
-        if missing_keys:
-            return jsonify({"error": f"Missing keys: {', '.join(missing_keys)}"}), 400
+        missing = [k for k in required_keys if k not in data]
+        if missing:
+            return jsonify({'error': f"Missing keys: {', '.join(missing)}"}), 400
 
-        # Extract and convert input features
-        input_array = np.array([[
-            float(data['qualifying_time']),
-            float(data['rain_probability']),
-            float(data['temperature']),
-            float(data['team_performance']),
-            float(data['clean_air_pace']),
-            float(data['position_change']),
-            float(data['sector_time'])
-        ]])
+        # Map incoming JSON to DataFrame with correct column names
+        input_dict = {
+            'QualifyingTime (s)': float(data['qualifying_time']),
+            'RainProbability': float(data['rain_probability']) / 100.0,
+            'Temperature (C)': float(data['temperature']),
+            'TeamPerformanceScore': float(data['team_performance']),
+            'CleanAirRacePace (s)': float(data['clean_air_pace']),
+            'AveragePositionChange': float(data['position_change']),
+            'TotalSectorTime (s)': float(data['sector_time'])
+        }
+        input_df = pd.DataFrame([input_dict], columns=features)
 
-        # Select only relevant features for prediction
-        input_df = pd.DataFrame(input_array, columns=features)
+        # Preprocess: impute and scale
+        X_imp = imputer.transform(input_df)
+        X_scaled = scaler.transform(X_imp)
 
-        # Impute missing values if any (though likely none)
-        input_imp = imputer.transform(input_df)
+        # Predict
+        predicted_time = model.predict(X_scaled)[0]
+        print("Predicted Time:",predicted_time)
 
-        # Scale input features
-        input_scaled = scaler.transform(input_imp)
+        # Confidence: require AvgLapTime to be set
+        if AvgLapTime is not None:
+            diff = abs(predicted_time - AvgLapTime)
+            raw_conf = 100 - diff
+            confidence = max(85, min(100, raw_conf))
+        else:
+            confidence = 85.0
 
-        # Make prediction
-        predicted_time = model.predict(input_scaled)[0]
-        
-        # Optional: Calculate confidence or other metrics here
-        # For simplicity, we return predicted lap time with a confidence estimate
-        confidence = max(85, min(100, (100 - abs(predicted_time - Y_actual_mean)))))  # placeholder
-
-        # Return response
+        print("Data Send")
         return jsonify({
             'predicted_lap_time': round(predicted_time, 3),
             'confidence': round(confidence, 1)
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'error': str(e)}), 500
 
+try:
+    if __name__ == '__main__':
+        app.run(debug=False)
+except KeyboardInterrupt:
+    print("Shutting Down Flask Server")
 # Optional health check
 @app.route('/health', methods=['GET'])
 def health():
@@ -82,8 +104,9 @@ def health():
 def model_info():
     return jsonify({
         "features": features,
-        "importances": feature_importances.tolist()
+        # "importances": feature_importances.tolist()
     })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+

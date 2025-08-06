@@ -34,7 +34,7 @@ class F1Predictor {
             const input = document.getElementById(name);
             const valueDisplay = document.getElementById(`${name}_value`);
             const trackFill = input.closest('.parameter-group').querySelector('.slider-track-fill');
-            
+
             if (input && valueDisplay && trackFill) {
                 this.sliders[name] = {
                     input: input,
@@ -55,7 +55,7 @@ class F1Predictor {
                 this.handlePredict(e);
             });
         }
-        
+
         // Reset button
         if (this.resetBtn) {
             this.resetBtn.addEventListener('click', (e) => {
@@ -80,7 +80,7 @@ class F1Predictor {
                 slider.input.addEventListener('input', () => this.updateSlider(name));
                 slider.input.addEventListener('change', () => this.updateSlider(name));
                 slider.input.addEventListener('mousemove', () => this.updateSlider(name));
-                slider.input.addEventListener('touchmove', () => this.updateSlider(name));
+                slider.input.addEventListener('touchmove',() => this.updateSlider(name),{passive:true});
             }
         });
 
@@ -102,7 +102,7 @@ class F1Predictor {
         Object.keys(this.sliderConfig).forEach(name => {
             const config = this.sliderConfig[name];
             const slider = this.sliders[name];
-            
+
             if (slider && slider.input) {
                 slider.input.value = config.default;
                 this.updateSlider(name);
@@ -113,17 +113,17 @@ class F1Predictor {
     updateSlider(name) {
         const config = this.sliderConfig[name];
         const slider = this.sliders[name];
-        
+
         if (!config || !slider || !slider.input || !slider.valueDisplay || !slider.trackFill) {
             return;
         }
-        
+
         const value = parseFloat(slider.input.value);
-        
+
         // Update value display
         const formattedValue = value.toFixed(config.decimals);
         slider.valueDisplay.textContent = `${formattedValue}${config.unit}`;
-        
+
         // Update track fill
         const percentage = ((value - config.min) / (config.max - config.min)) * 100;
         slider.trackFill.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
@@ -133,25 +133,26 @@ class F1Predictor {
         if (e) {
             e.preventDefault();
         }
-        
+
         // Show loading state
         this.setLoadingState(true);
-        
+
         try {
             // Get form data
             const formData = this.getFormData();
-            
+
             // Simulate API call delay for realistic UX
             await this.delay(1500);
-            
+
             // Get prediction (simulate ML model)
-            const prediction = this.simulateMLPrediction(formData);
-            
+            const prediction = await this.simulateMLPrediction(formData);
+            console.log("PREDICTION:")
+            console.log(prediction)
             // Display results
             this.displayResults(prediction);
-            
+
         } catch (error) {
-            console.error('Prediction error:', error);
+            console.log('Prediction error:', error);
             this.showError('Failed to predict lap time. Please try again.');
         } finally {
             this.setLoadingState(false);
@@ -168,47 +169,33 @@ class F1Predictor {
         return data;
     }
 
-    simulateMLPrediction(data) {
-        // Simulate a realistic ML model prediction
-        // This is a simplified version based on the provided model features
+    async simulateMLPrediction(data) {
+        // Make the POST request and await the response JSON
+        const response = await fetch('/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
         
-        const {
-            qualifying_time,
-            rain_probability,
-            temperature,
-            team_performance,
-            clean_air_pace,
-            position_change,
-            sector_time
-        } = data;
-        
-        // Base prediction around qualifying time with adjustments
-        let prediction = qualifying_time * 1.35; // Base conversion factor
-        
-        // Apply feature influences (simplified model)
-        prediction += (rain_probability / 100) * 2.5; // Rain slows down
-        prediction += (temperature - 25) * 0.02; // Temperature effect
-        prediction -= (team_performance - 0.5) * 1.5; // Team performance
-        prediction += (clean_air_pace - 94) * 0.3; // Clean air pace correlation
-        prediction += position_change * 0.1; // Position change minor effect
-        prediction += (sector_time - 95) * 0.2; // Sector time correlation
-        
-        // Add some realistic randomness
-        prediction += (Math.random() - 0.5) * 0.3;
-        
-        // Clamp to realistic range
-        prediction = Math.max(92.5, Math.min(97.5, prediction));
-        
-        return {
-            lapTime: prediction,
-            confidence: 0.85 + Math.random() * 0.1,
-            factors: this.getInfluencingFactors(data)
+        const responseData = await response.json();
+        console.log('Predicted lap time:', responseData);
+    
+        const lapTime = responseData.predicted_lap_time;
+        // const confidence = responseData.confidence;
+        // const factors = this.getInfluencingFactors(responseData);
+    
+        const result = {
+            lapTime
         };
+    
+        // Return the result object directly
+        return result;
     }
+    
 
     getInfluencingFactors(data) {
         const factors = [];
-        
+
         if (data.rain_probability > 30) {
             factors.push('High rain probability increasing lap time');
         }
@@ -221,27 +208,29 @@ class F1Predictor {
         if (data.clean_air_pace < 92) {
             factors.push('Excellent clean air pace');
         }
-        
+
         return factors;
     }
 
-    displayResults(prediction) {
+    async displayResults(prediction) {
         if (!this.predictedTimeElement || !this.resultsSection) {
             return;
         }
-        
+
         // Format lap time
-        const formattedTime = prediction.lapTime.toFixed(2);
-        this.predictedTimeElement.textContent = `${formattedTime}s`;
+        const formattedTime = parseFloat(prediction.lapTime).toFixed(2);
         
+        console.log("prediction",prediction.lapTime)
+        this.predictedTimeElement.textContent = `${formattedTime}s`;
+
         // Show results section
         this.resultsSection.classList.remove('hidden');
-        
+
         // Scroll to results smoothly
         setTimeout(() => {
-            this.resultsSection.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
+            this.resultsSection.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
             });
         }, 200);
     }
@@ -251,18 +240,18 @@ class F1Predictor {
         Object.keys(this.sliderConfig).forEach(name => {
             const config = this.sliderConfig[name];
             const slider = this.sliders[name];
-            
+
             if (slider && slider.input) {
                 slider.input.value = config.default;
                 this.updateSlider(name);
             }
         });
-        
+
         // Hide results
         if (this.resultsSection) {
             this.resultsSection.classList.add('hidden');
         }
-        
+
         // Add visual feedback
         if (this.resetBtn) {
             this.resetBtn.style.transform = 'scale(0.95)';
@@ -270,12 +259,12 @@ class F1Predictor {
                 this.resetBtn.style.transform = 'scale(1)';
             }, 150);
         }
-        
+
         // Scroll back to top of form
         if (this.form) {
-            this.form.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
+            this.form.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
             });
         }
     }
@@ -284,7 +273,7 @@ class F1Predictor {
         if (!this.predictBtn || !this.btnText || !this.btnLoader) {
             return;
         }
-        
+
         if (loading) {
             this.predictBtn.disabled = true;
             this.btnText.style.opacity = '0';
@@ -318,14 +307,14 @@ class F1Predictor {
             transform: translateX(100%);
             transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         `;
-        
+
         document.body.appendChild(errorDiv);
-        
+
         // Animate in
         setTimeout(() => {
             errorDiv.style.transform = 'translateX(0)';
         }, 100);
-        
+
         // Remove after delay
         setTimeout(() => {
             errorDiv.style.transform = 'translateX(100%)';
@@ -347,61 +336,61 @@ class VisualEffects {
     constructor() {
         this.initializeEffects();
     }
-    
+
     initializeEffects() {
         // Add subtle parallax to racing grid
         this.setupParallax();
-        
+
         // Add glow effects on hover
         this.setupGlowEffects();
-        
+
         // Add racing stripe animations
         this.setupRacingStripes();
     }
-    
+
     setupParallax() {
         const grid = document.querySelector('.racing-grid');
         if (!grid) return;
-        
+
         let ticking = false;
-        
+
         function updateParallax() {
             const scrolled = window.pageYOffset;
             const rate = scrolled * -0.5;
             grid.style.transform = `translate3d(0, ${rate}px, 0)`;
             ticking = false;
         }
-        
+
         function requestTick() {
             if (!ticking) {
                 requestAnimationFrame(updateParallax);
                 ticking = true;
             }
         }
-        
+
         window.addEventListener('scroll', requestTick);
     }
-    
+
     setupGlowEffects() {
         const glowElements = document.querySelectorAll('.btn, .parameter-group, .results-card');
-        
+
         glowElements.forEach(element => {
-            element.addEventListener('mouseenter', function() {
+            element.addEventListener('mouseenter', function () {
                 this.style.filter = 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.3))';
             });
-            
-            element.addEventListener('mouseleave', function() {
+
+            element.addEventListener('mouseleave', function () {
                 this.style.filter = 'none';
             });
         });
     }
-    
+
     setupRacingStripes() {
         // Add animated racing stripes to buttons
         const buttons = document.querySelectorAll('.btn--primary');
-        
+
         buttons.forEach(button => {
-            button.addEventListener('mouseenter', function() {
+            button.addEventListener('mouseenter', function () {
                 if (!this.querySelector('.racing-stripes')) {
                     const stripes = document.createElement('div');
                     stripes.className = 'racing-stripes';
@@ -421,7 +410,7 @@ class VisualEffects {
                         pointer-events: none;
                     `;
                     this.appendChild(stripes);
-                    
+
                     setTimeout(() => {
                         if (stripes.parentNode) {
                             stripes.parentNode.removeChild(stripes);
@@ -430,7 +419,7 @@ class VisualEffects {
                 }
             });
         });
-        
+
         // Add CSS animation for racing stripes
         if (!document.getElementById('racing-stripe-styles')) {
             const style = document.createElement('style');
@@ -447,7 +436,7 @@ class VisualEffects {
 }
 
 // Initialize application when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Wait a bit for all elements to be rendered
     setTimeout(() => {
         // Initialize main predictor
@@ -457,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('❌ Error initializing F1 Predictor:', error);
         }
-        
+
         // Initialize visual effects
         try {
             window.visualEffects = new VisualEffects();
@@ -465,10 +454,10 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('❌ Error initializing visual effects:', error);
         }
-        
+
         // Add loading completion class for animations
         document.body.classList.add('loaded');
-        
+
         // Add welcome message in console
         console.log(`
     🏎️ F1 Monaco GP Predictor Loaded
